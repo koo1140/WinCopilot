@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows Copilot</title>
+    <style>
+        body {
+            background-color: #2e2e2e;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #container {
+            width: 80%;
+            max-width: 800px;
+            background-color: #3e3e3e;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        #header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #modelSelect {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #1e1e1e;
+            color: #ffffff;
+        }
+        #chatDisplay {
+            height: 300px;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            overflow-y: scroll;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .user {
+            color: #005999;
+        }
+        .ai {
+            color: #00994d;
+        }
+        .user strong {
+            color: #007acc;
+        }
+        .ai strong {
+            color: #00cc66;
+        }
+        #inputContainer {
+            display: flex;
+            align-items: center;
+        }
+        #userInput {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 4px 0 0 4px;
+            background-color: #1e1e1e;
+            color: #ffffff;
+        }
+        #sendButton {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            background-color: #4e4e4e;
+            color: #ffffff;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #sendButton:hover {
+            background-color: #6e6e6e;
+        }
+        #restartButton {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            background-color: #8b0000; /* darker red color */
+            color: #ffffff;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 20px;
+        }
+        #restartButton:hover {
+            background-color: #a52a2a; /* darker red color on hover */
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="header">
+            <h1>Windows Copilot - Beta (v0.3)</h1>
+            <select id="modelSelect">
+                <!-- The options will be dynamically inserted by the server -->
+                {% for model in models %}
+                    <option value="{{ model }}">{{ model }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div id="chatDisplay"></div>
+        <div id="inputContainer">
+            <input type="text" id="userInput" placeholder="Type your message here...">
+            <button id="sendButton">Send</button>
+        </div>
+        <button id="restartButton">shutdown</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const chatDisplay = document.getElementById('chatDisplay');
+            const userInput = document.getElementById('userInput');
+            const sendButton = document.getElementById('sendButton');
+            const modelSelect = document.getElementById('modelSelect');
+            const restartButton = document.getElementById('restartButton');
+
+            sendButton.addEventListener('click', () => {
+                const message = userInput.value;
+                const model = modelSelect.value;
+                if (message.trim()) {
+                    appendMessage('YOU', message, 'user');
+                    sendMessageToServer(message, model);
+                    userInput.value = '';
+                }
+            });
+
+            function appendMessage(sender, message, cssClass) {
+                const messageElement = document.createElement('div');
+                messageElement.classList.add(cssClass);
+                let index = 0;
+                const typingEffect = setInterval(() => {
+                    if (index <= message.length) {
+                        messageElement.innerHTML = `<strong>${sender}:</strong> ${message.slice(0, index)}`;
+                        index++;
+                    } else {
+                        clearInterval(typingEffect);
+                        chatDisplay.scrollTop = chatDisplay.scrollHeight;
+                    }
+                }, 5);
+                chatDisplay.appendChild(messageElement);
+            }
+
+            async function sendMessageToServer(message, model) {
+                try {
+                    const response = await fetch('/send_message', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ message, model }),
+                    });
+                    const data = await response.json();
+                    if (data.response) {
+                        appendMessage('COPILOT', data.response, 'ai');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+
+            userInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    sendButton.click();
+                }
+            });
+
+            restartButton.addEventListener('click', async () => {
+    try {
+        const response = await fetch('/restart', { method: 'GET' });
+        if (!response.ok) {
+            throw new Error('Failed to restart server');
+        }
+        console.log('Server restarting...');
+        // Refresh the page after successful restart
+        window.location.reload();
+    } catch (error) {
+        window.location.reload();
+        console.error('Error:', error);
+    }
+});
+
+
+        });
+    </script>
+</body>
+</html>
