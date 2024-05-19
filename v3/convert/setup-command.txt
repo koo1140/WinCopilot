@@ -1,0 +1,1 @@
+C:/Users/{NAME}/AppData/Local/Microsoft/WindowsApps/python3.11.exe setup.py build
